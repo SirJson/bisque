@@ -1,0 +1,13 @@
+#!/bin/bash
+
+BRANCHES=$(git --no-pager branch --all --format="%(if)%(HEAD)%(then)%(else)%(if:equals=HEAD)%(refname:strip=3)%(then)%(else)%1B[0;34;1mbranch%09%1B[m%(refname:short)%(end)%(end)" | sed '/^$/d') || exit 1
+TAGS=$(git --no-pager tag | awk '{print "\x1b[35;1mtag\x1b[m\t" $1}') || exit 1
+
+test -z "$TARGET" && test -z "$TAGS" && exit 1
+
+TARGET=$( (
+    echo "$BRANCHES"
+    test ! -z "$TAGS" && echo "$TAGS"
+) | fzf --no-multi -n 2 --ansi --no-hscroll --layout=reverse-list --header='Checkout git branch/tag, with the preview showing the commits between the tag/branch and HEAD' --preview="printf '\e[4m\e[94mCommits between your selection and HEAD\e[0m\n\033[36mCurrent branch:\e[0m ';git rev-parse --abbrev-ref HEAD;printf '\n';git --no-pager log -150 --pretty=format:'• [%cr] <%h>: %s' '..{2}'") || exit 0
+
+git checkout "$(awk '{print $2}' <<<"$TARGET")"

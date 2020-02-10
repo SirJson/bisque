@@ -1,0 +1,12 @@
+#!/bin/bash
+
+ARG1=$1
+MSG=${ARG1:-"Update - $(date)"}
+
+function mkcommit()
+{
+    echo "Commit Message: $1"
+    git commit -am "$1"
+}
+
+git add -A && mkcommit "$MSG" && git push || echo "Git upload failed"

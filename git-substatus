@@ -1,0 +1,12 @@
+#!/bin/bash
+
+CYAN=$(tput setaf 6)
+BOLD=$(tput bold)
+RESET=$(tput sgr0)
+
+echo "> Searching for git directories..."
+find . -name ".git" -type d | while read -r dir; do
+    echo "-----"
+    echo -e Git status @ "${CYAN}""${BOLD}""${dir/.git/}""${RESET}"
+    sh -c "cd ${dir/.git/} && git status -s -uall -b"
+done

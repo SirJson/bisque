@@ -1,0 +1,85 @@
+#!/bin/bash
+
+ask() {
+    # https://djm.me/ask
+    local prompt default reply
+
+    if [ "${2:-}" = "Y" ]; then
+        prompt="Y/n"
+        default=Y
+    elif [ "${2:-}" = "N" ]; then
+        prompt="y/N"
+        default=N
+    else
+        prompt="y/n"
+        default=
+    fi
+
+    while true; do
+
+        # Ask the question (not using "read -p" as it uses stderr not stdout)
+        echo -n "$1 [$prompt] "
+
+        # Read the answer (use /dev/tty in case stdin is redirected from somewhere else)
+        read reply </dev/tty
+
+        # Default?
+        if [ -z "$reply" ]; then
+            reply=$default
+        fi
+
+        # Check if the reply is valid
+        case "$reply" in
+        Y* | y*) return 0 ;;
+        N* | n*) return 1 ;;
+        esac
+
+    done
+}
+
+_set_fzf_default_opts() {
+    local color00='#263238'
+    local color01='#2C393F'
+    local color04='#C9CCD3'
+    local color06='#D5DBE5'
+    local color0A='#FFCC00'
+    local color0C='#80CBC4'
+    local color0D='#89DDFF'
+
+    INFO_HEADER="<ESC> Exit, <PgUp> Preview up, <PgDown> Preview down"
+
+    export FZF_DEFAULT_OPTS="
+      --color=bg+:$color01,bg:$color00,spinner:$color0C,hl:$color0D
+      --color=fg:$color04,header:$color0D,info:$color0A,pointer:$color0C
+      --color=marker:$color0C,fg+:$color06,prompt:$color0A,hl+:$color0D
+      -m --cycle --border --layout=reverse-list --preview-window=right:wrap --bind pgdn:preview-down --bind pgup:preview-up --header \"$INFO_HEADER\""
+}
+
+update_all() {
+    clear
+    MSG="Update - $(date)"
+    ORG=$PWD
+    for d in */; do
+        if [ -d "$d/.git" ]; then
+            cd "$d" || exit 1
+            printf "\n\nSynchronizing %s...\n" "$d"
+            git add -A && git commit -am "$MSG" && git pull && git push
+            cd "$ORG" || exit 1
+        fi
+    done
+}
+
+RESULTS=$(
+    for d in */; do
+        if [ -d "$d/.git" ]; then
+            printf "%s\n" "$d"
+        fi
+    done
+)
+_set_fzf_default_opts
+
+echo "$RESULTS" | fzf --preview="cd {}; git status -vv --column=never --renames --find-renames" --prompt="Pending Repositories. Press <ENTER> to continue..."
+
+if ask "Synchronize all repositories?" Y; then
+    update_all
+fi
