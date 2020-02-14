@@ -1,5 +1,8 @@
 #!/bin/bash
 
+INVERT="\u001b[7m"
+RESET="\u001b[0m"
+
 ask() {
     # https://djm.me/ask
     local prompt default reply
@@ -38,28 +41,17 @@ ask() {
 }
 
 _set_fzf_default_opts() {
-    local color00='#263238'
-    local color01='#2C393F'
-    local color04='#C9CCD3'
-    local color06='#D5DBE5'
-    local color0A='#FFCC00'
-    local color0C='#80CBC4'
-    local color0D='#89DDFF'
-
-    INFO_HEADER="<ESC> Exit, <PgUp> Preview up, <PgDown> Preview down"
+    local info="<ESC> Exit, <PgUp> Preview up, <PgDown> Preview down"
 
     export FZF_DEFAULT_OPTS="
-      --color=bg+:$color01,bg:$color00,spinner:$color0C,hl:$color0D
-      --color=fg:$color04,header:$color0D,info:$color0A,pointer:$color0C
-      --color=marker:$color0C,fg+:$color06,prompt:$color0A,hl+:$color0D
-      -m --cycle --border --layout=reverse-list --preview-window=right:wrap --bind pgdn:preview-down --bind pgup:preview-up --header \"$INFO_HEADER\""
+      -m --cycle --border --layout=reverse-list --prompt='Pending Repositories. Press <ENTER> to continue...' --preview-window=right:wrap --bind pgdn:preview-down --bind pgup:preview-up --header \"$info\""
 }
 
-update_all() {
-    clear
+sync_dirs() {
+    local dirs=$1
     MSG="Update - $(date)"
     ORG=$PWD
-    for d in */; do
+    for d in $dirs; do
         if [ -d "$d/.git" ]; then
             cd "$d" || exit 1
             printf "\n\nSynchronizing %s...\n" "$d"
@@ -70,16 +62,17 @@ update_all() {
 }
 
 RESULTS=$(
+    start=$PWD
     for d in */; do
         if [ -d "$d/.git" ]; then
-            printf "%s\n" "$d"
+            cd "$d" || continue
+            test -n "$(git status --porcelain=v1)" && printf "%s\n" "$d"
+            cd "$start" || exit
         fi
     done
 )
 _set_fzf_default_opts
 
-echo "$RESULTS" | fzf --preview="cd {}; git status -vv --column=never --renames --find-renames" --prompt="Pending Repositories. Press <ENTER> to continue..."
-
-if ask "Synchronize all repositories?" Y; then
-    update_all
-fi
+selection=$(echo "$RESULTS" | fzf --preview="cd {}; printf '$INVERT'; printf 'Status$RESET\n\n'; git status -vv --column=never --renames --find-renames; printf '$INVERT'; printf 'Remote endpoints$RESET\n\n'; git remote -v")
+selection=${selection}
+sync_dirs "$selection"

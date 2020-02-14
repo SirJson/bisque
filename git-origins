@@ -1,0 +1,20 @@
+#!/bin/bash
+
+INVERT="\u001b[7m"
+RESET="\u001b[0m"
+
+_set_fzf_default_opts() {
+    local info="<ESC> Exit, <PgUp> Preview up, <PgDown> Preview down"
+    export FZF_DEFAULT_OPTS="--cycle --border --bind pgdn:preview-down --bind pgup:preview-up --header \"$info\""
+}
+
+RESULTS=$(
+    for d in */; do
+        if [ -d "$d/.git" ]; then
+            printf "%s\n" "$d"
+        fi
+    done
+)
+_set_fzf_default_opts
+
+echo "$RESULTS" | fzf --preview="cd {}; printf '$INVERT'; printf 'List of registered git remote endpoints$RESET\n\n'; git remote -v"
