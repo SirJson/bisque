@@ -1,4 +1,4 @@
 #!/bin/bash
 
 gmsg="$(curl -s whatthecommit.com/index.txt)"
-git add -A && git commit -am "$gmsg" && git push
+git add -A; git commit -am "$gmsg"; git push
